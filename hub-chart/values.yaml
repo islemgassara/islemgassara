@@ -1,0 +1,19 @@
+postgres:
+  image: postgres:16-alpine
+  db: hub_db
+  user: hub_admin
+  storage: 1Gi
+
+n8n:
+  image: n8nio/n8n:1.60.1
+  storage: 1Gi
+
+hub:
+  image: integration-hub:latest
+  replicas: 1
+
+secrets:
+  dbPassword: hub_password
+  cryptoSecretKey: "cxkoEGNRRaAAX5OnzEZs4bBdXl+9ex+YqiyaVcxN0DQ="
+  webhookSecret: "L3Gc0CIdI4pGKPSYNyon19Jlj7Q6b6cm"
+  jwtSecret: "AEtF73KtjsYBuCIGKa+9Vuib8qWUBKC2uQtqY/FmrcB+Iv2xDiEZfGv4dSyGDi+upptBEKC/NRKQyMbo5eO4wg=="
