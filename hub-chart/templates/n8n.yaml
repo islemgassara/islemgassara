@@ -27,6 +27,13 @@ spec:
           image: {{ .Values.n8n.image }}
           ports:
             - containerPort: 5678
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           volumeMounts:
             - name: n8n-storage
               mountPath: /home/node/.n8n

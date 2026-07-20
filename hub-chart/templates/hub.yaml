@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: integration-hub
-          image: {{ .Values.hub.image }}
+          image: "{{ .Values.hub.repository }}:{{ .Values.hub.tag }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
@@ -47,17 +47,29 @@ spec:
                   key: HUB_JWT_SECRET
             - name: HUB_AUTH_MODE
               value: shared-jwt
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "400m"
+            limits:
+              memory: "768Mi"
+              cpu: "800m"
+          startupProbe:
+            httpGet:
+              path: /router-api/2/ping
+              port: 8085
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
           readinessProbe:
             httpGet:
               path: /router-api/2/ping
               port: 8085
-            initialDelaySeconds: 15
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /router-api/2/ping
               port: 8085
-            initialDelaySeconds: 25
             periodSeconds: 10
 ---
 apiVersion: v1

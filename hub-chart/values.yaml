@@ -9,7 +9,8 @@ n8n:
   storage: 1Gi
 
 hub:
-  image: integration-hub:latest
+  repository: islem12/integration-hub
+  tag: latest
   replicas: 1
 
 secrets:
@@ -17,3 +18,6 @@ secrets:
   cryptoSecretKey: "cxkoEGNRRaAAX5OnzEZs4bBdXl+9ex+YqiyaVcxN0DQ="
   webhookSecret: "L3Gc0CIdI4pGKPSYNyon19Jlj7Q6b6cm"
   jwtSecret: "AEtF73KtjsYBuCIGKa+9Vuib8qWUBKC2uQtqY/FmrcB+Iv2xDiEZfGv4dSyGDi+upptBEKC/NRKQyMbo5eO4wg=="
+
+mock:
+  image: islem12/mock-cfec:latest

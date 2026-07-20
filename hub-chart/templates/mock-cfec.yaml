@@ -24,10 +24,17 @@ spec:
     spec:
       containers:
         - name: mock-cfec
-          image: mock-cfec-service-mock-cfec:latest
+          image: {{ .Values.mock.image }}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
           volumeMounts:
             - name: mock-storage
               mountPath: /app/storage
