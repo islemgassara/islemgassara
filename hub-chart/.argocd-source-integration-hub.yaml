@@ -1,0 +1,8 @@
+helm:
+  parameters:
+  - name: hub.repository
+    value: islem12/integration-hub
+    forcestring: true
+  - name: hub.tag
+    value: 48974dc
+    forcestring: true
