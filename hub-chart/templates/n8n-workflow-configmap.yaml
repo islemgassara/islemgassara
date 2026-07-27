@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: n8n-workflow-cfn
+data:
+  workflow.json: |
+{{ .Files.Get "files/n8n-workflow-cfn.json" | indent 4 }}

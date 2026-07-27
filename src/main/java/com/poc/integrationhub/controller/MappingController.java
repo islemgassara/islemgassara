@@ -6,6 +6,7 @@ import com.poc.integrationhub.repository.MappingRuleRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,12 +21,23 @@ public class MappingController {
         this.mappingService = mappingService;
     }
 
+    @GetMapping("/mappings")
+    public ResponseEntity<List<MappingRule>> listMappings(@PathVariable String connectorId) {
+        return ResponseEntity.ok(mappingRuleRepository.findByConnectorId(connectorId));
+    }
+
     @PostMapping("/mappings")
     public ResponseEntity<MappingRule> addMapping(@PathVariable String connectorId,
                                                     @RequestBody MappingRule rule) {
         rule.setConnectorId(connectorId);
         MappingRule saved = mappingRuleRepository.save(rule);
         return ResponseEntity.ok(saved);
+    }
+
+    @DeleteMapping("/mappings/{id}")
+    public ResponseEntity<Void> deleteMapping(@PathVariable String connectorId, @PathVariable Long id) {
+        mappingRuleRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/mappings/preview")

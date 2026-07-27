@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hub-connector-cfn-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: integration-hub
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init-connector
+          image: python:3.11-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              pip install requests --quiet --break-system-packages 2>/dev/null || pip install requests --quiet
+              python3 << 'PYSCRIPT'
+              import time, requests
+              from requests.adapters import HTTPAdapter
+              from urllib3.util.retry import Retry
+
+              HUB_URL = "http://integration-hub:8085/router-api/2"
+
+              session = requests.Session()
+              retry = Retry(
+                  total=8,
+                  backoff_factor=2,
+                  status_forcelist=[502, 503, 504],
+                  allowed_methods=frozenset(["GET", "POST", "PUT"]),
+                  raise_on_status=False,
+              )
+              adapter = HTTPAdapter(max_retries=retry)
+              session.mount("http://", adapter)
+
+              print("Attente du Hub...")
+              for _ in range(60):
+                  try:
+                      r = session.get(f"{HUB_URL}/ping", timeout=5)
+                      if r.status_code == 200:
+                          break
+                  except Exception:
+                      pass
+                  time.sleep(3)
+              else:
+                  raise SystemExit("Hub jamais devenu disponible après 3 minutes")
+              print("Hub prêt.")
+
+              time.sleep(3)
+
+              token = session.post(f"{HUB_URL}/_dev/generate-token", params={"tenantId": "GEMY"}, timeout=10).json()["token"]
+              headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+              r = session.get(f"{HUB_URL}/connectors/cfn", headers=headers, timeout=10)
+              if r.status_code == 200:
+                  print("Connecteur cfn existe déjà, initialisation ignorée.")
+              else:
+                  print("Création du connecteur cfn...")
+                  session.post(f"{HUB_URL}/connectors", headers=headers, json={
+                      "id": "cfn", "tenantId": "GEMY",
+                      "n8nWebhookPath": "/mock-external-system", "active": True
+                  }, timeout=10).raise_for_status()
+
+                  session.post(f"{HUB_URL}/connectors/cfn/mappings", headers=headers, json={
+                      "targetField": "nom_client", "sourceExpr": "client.fullName", "required": True
+                  }, timeout=10).raise_for_status()
+
+                  session.post(f"{HUB_URL}/connectors/cfn/mappings", headers=headers, json={
+                      "targetField": "pays", "sourceExpr": "STATIC:FR", "required": False
+                  }, timeout=10).raise_for_status()
+
+                  session.put(f"{HUB_URL}/connectors/cfn/config", headers=headers, json={
+                      "configKey": "baseUrl", "configValue": "http://mock-cfec:4000", "isSecret": False
+                  }, timeout=10).raise_for_status()
+
+                  session.put(f"{HUB_URL}/connectors/cfn/config", headers=headers, json={
+                      "configKey": "login", "configValue": "demo", "isSecret": False
+                  }, timeout=10).raise_for_status()
+
+                  session.put(f"{HUB_URL}/connectors/cfn/config", headers=headers, json={
+                      "configKey": "password", "configValue": "demo123", "isSecret": True
+                  }, timeout=10).raise_for_status()
+
+                  print("Connecteur cfn initialisé avec succès.")
+              PYSCRIPT

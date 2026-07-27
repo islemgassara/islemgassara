@@ -1,0 +1,430 @@
+{
+  "name": "cfec",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.config.baseUrl }}/auth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"login\": $('Webhook').item.json.body.config.login, \"password\": $('Webhook').item.json.body.config.password } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "39e976a0-a2e4-4021-b6b6-75e8da97b6c3",
+      "name": "Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        460
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.config.baseUrl }}/safe-auth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Auth').item.json.body.token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "f232ab02-9f03-4f92-a467-188b4fdaa000",
+      "name": "Safe Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        460
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.config.baseUrl }}/folders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('Safe Auth').item.json.headers['set-cookie'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"nomClient\": \"{{ $('Webhook').first().json.body.mappedPayload.nom_client }}\",\n  \"tenantId\": \"{{ $('Webhook').first().json.headers['x-tenant-id'] }}\",\n  \"executionId\": \"{{ $('Webhook').first().json.headers['x-execution-id'] }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "cabb070a-19f9-4d12-9446-a1e7bf281cad",
+      "name": "Create Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        460
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1f9e67b-73a6-4892-9fcf-967e9810ab3a",
+              "name": "folderId",
+              "value": "={{ $('Create Folder').item.json.body.folderId }}",
+              "type": "string"
+            },
+            {
+              "id": "d4bfdead-d2cc-427f-872d-87830dce342e",
+              "name": "cookie",
+              "value": "={{ $('Safe Auth').item.json.headers['set-cookie'][0] }}",
+              "type": "string"
+            },
+            {
+              "id": "f41cbe0a-8fb9-40e0-a37f-bd25c22cea96",
+              "name": "nomClient",
+              "value": "={{ $('Webhook').item.json.body.mappedPayload.nom_client }}",
+              "type": "string"
+            },
+            {
+              "id": "f4e69015-ed52-445c-927f-bbadde9c42be",
+              "name": "tenantId",
+              "value": "={{ $('Webhook').first().json.headers['x-tenant-id'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a5cff0fa-ee91-4962-b850-2b42ece677b8",
+              "name": "executionId",
+              "value": "={{ $('Webhook').first().json.headers['x-execution-id'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4b36af3d-b26a-425a-a3b7-15081996ad72",
+      "name": "Collect Refs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const contenu = `Contrat pour ${$input.first().json.nomClient}\\nG\u00e9n\u00e9r\u00e9 automatiquement par le Hub`;\n\nreturn [{\n  json: $input.first().json,\n  binary: {\n    document: await this.helpers.prepareBinaryData(Buffer.from(contenu), 'contrat.txt', 'text/plain')\n  }\n}];"
+      },
+      "id": "057370f3-1da2-4b34-b1b2-fbc389b6f4f9",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.config.baseUrl }}/folders/{{ $('Collect Refs').item.json.folderId }}/documents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('Collect Refs').item.json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "document",
+              "inputDataFieldName": "document"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "7eda29de-44b6-4e81-bd2d-c48a1649992c",
+      "name": "Upload Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        460
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "29bcde9a-ea15-42a9-bdca-bc634c128ebd",
+              "name": "status",
+              "value": "={{ ($('Auth').item.json.statusCode && $('Auth').item.json.statusCode < 400 &&\n   $('Safe Auth').item.json.statusCode && $('Safe Auth').item.json.statusCode < 400 &&\n   $('Create Folder').item.json.statusCode && $('Create Folder').item.json.statusCode < 400 &&\n   $('Upload Document').item.json.statusCode && $('Upload Document').item.json.statusCode < 400)\n  ? \"SUCCESS\" : \"FAILED\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6636f7fe-f42e-44c2-81d9-25de3bc9d83e",
+              "name": "externalRefs",
+              "value": "={{ { folderId: $('Create Folder').item.json.body.folderId } }}",
+              "type": "object"
+            },
+            {
+              "id": "30c8ef09-8ef1-46e1-9a99-2cc00f854db5",
+              "name": "steps",
+              "value": "={{ [\n  { step: \"auth\", httpStatus: $('Auth').item.json.statusCode || 0, error: $('Auth').item.json.error || null },\n  { step: \"safeAuth\", httpStatus: $('Safe Auth').item.json.statusCode || 0, error: $('Safe Auth').item.json.error || null },\n  { step: \"createFolder\", httpStatus: $('Create Folder').item.json.statusCode || 0, error: $('Create Folder').item.json.error || null },\n  { step: \"uploadDocument\", httpStatus: $('Upload Document').item.json.statusCode || 0, error: $('Upload Document').item.json.error || null }\n] }}",
+              "type": "array"
+            },
+            {
+              "id": "ddfe54d7-d7f9-42c9-a633-933b3409bd74",
+              "name": "nomClient",
+              "value": "={{ $('Webhook').item.json.body.mappedPayload.nom_client }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31c95475-b582-4e96-b55f-d33dc1fd8250",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "572d0a0f-4c39-4a01-bbf5-9cc4b5c7c099",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mock-external-system",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5a5b14db-940c-4eec-aafe-9f3d24f907c8",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        460,
+        460
+      ],
+      "webhookId": "mock-external-system"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Webhook').item.json.headers['x-webhook-secret'] }}",
+              "rightValue": "={{ $env.N8N_WEBHOOK_SECRET }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "verify-secret-node-001",
+      "name": "Verify Webhook Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        570,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"FORBIDDEN\", \"message\": \"Invalid webhook secret\" } }}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "reject-node-001",
+      "name": "Reject Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        570,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Auth": {
+      "main": [
+        [
+          {
+            "node": "Safe Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safe Auth": {
+      "main": [
+        [
+          {
+            "node": "Create Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Folder": {
+      "main": [
+        [
+          {
+            "node": "Collect Refs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Refs": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Upload Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Document": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Webhook Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Webhook Secret": {
+      "main": [
+        [
+          {
+            "node": "Auth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
