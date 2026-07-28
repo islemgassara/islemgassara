@@ -4,5 +4,5 @@ helm:
     value: islem12/integration-hub
     forcestring: true
   - name: hub.tag
-    value: 9d75255
+    value: 1a14f6d
     forcestring: true
