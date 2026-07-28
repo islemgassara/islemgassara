@@ -3,8 +3,12 @@ name: CI/CD - Integration Hub
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - "hub-chart/.argocd-source-integration-hub.yaml"
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - "hub-chart/.argocd-source-integration-hub.yaml"
 
 jobs:
   build-and-test:
