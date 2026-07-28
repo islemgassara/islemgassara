@@ -21,7 +21,7 @@ class MappingServiceTest {
         rule.setSourceExpr("client.fullName");
         when(repo.findByConnectorId("cfn")).thenReturn(List.of(rule));
 
-        MappingService service = new MappingService(repo);
+        MappingService service = new MappingService(repo, new JsonLogicAllowList());
         Map<String, Object> input = Map.of("client", Map.of("fullName", "Jean Dupont"));
 
         Map<String, Object> result = service.applyMapping("cfn", input);
@@ -37,7 +37,7 @@ class MappingServiceTest {
         rule.setSourceExpr("STATIC:FR");
         when(repo.findByConnectorId("cfn")).thenReturn(List.of(rule));
 
-        MappingService service = new MappingService(repo);
+        MappingService service = new MappingService(repo, new JsonLogicAllowList());
         Map<String, Object> result = service.applyMapping("cfn", Map.of());
 
         assertEquals("FR", result.get("pays"));

@@ -13,8 +13,10 @@ public class MappingService {
 
     private final MappingRuleRepository mappingRuleRepository;
     private final JsonLogic jsonLogic = new JsonLogic();
+    private final JsonLogicAllowList allowList;
 
-    public MappingService(MappingRuleRepository mappingRuleRepository) {
+    public MappingService(MappingRuleRepository mappingRuleRepository, JsonLogicAllowList allowList) {
+        this.allowList = allowList;
         this.mappingRuleRepository = mappingRuleRepository;
     }
 
@@ -35,6 +37,7 @@ public class MappingService {
         }
         if (sourceExpr.trim().startsWith("{")) {
             try {
+                allowList.validate(sourceExpr);
                 return jsonLogic.apply(sourceExpr, payload);
             } catch (JsonLogicException e) {
                 throw new RuntimeException("Erreur JsonLogic sur l'expression: " + sourceExpr, e);
