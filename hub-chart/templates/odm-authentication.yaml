@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: odm-authentication
-          image: odm-authentication:latest
+          image: islem12/odm-authentication:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8090
