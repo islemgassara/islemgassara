@@ -35,7 +35,8 @@ spec:
             - |
               set -e
               echo "Import du workflow cfec via CLI (idempotent, pas d'API key)..."
-              n8n import:workflow --separate --input=/workflow
+              sed -e "1i [" -e "\$a ]" /workflow/workflow.json > /tmp/workflow-array.json
+              n8n import:workflow --input=/tmp/workflow-array.json
               echo "Import termine."
           volumeMounts:
             - name: n8n-storage
