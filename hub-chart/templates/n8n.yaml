@@ -22,21 +22,21 @@ spec:
       labels:
         app: n8n
     spec:
+      enableServiceLinks: false
       initContainers:
         - name: import-workflow
           image: {{ .Values.n8n.image }}
+          env:
+            - name: N8N_PORT
+              value: "5678"
           command:
             - sh
             - -c
             - |
               set -e
-              if n8n export:workflow --all --output=/tmp/check.json 2>/dev/null && grep -q '"name": "cfec"' /tmp/check.json 2>/dev/null; then
-                echo "Workflow cfec deja present, import ignore."
-              else
-                echo "Import du workflow cfec via CLI (pas d'API key necessaire)..."
-                n8n import:workflow --input=/workflow/workflow.json
-                echo "Import termine."
-              fi
+              echo "Import du workflow cfec via CLI (idempotent, pas d'API key)..."
+              n8n import:workflow --separate --input=/workflow
+              echo "Import termine."
           volumeMounts:
             - name: n8n-storage
               mountPath: /home/node/.n8n
@@ -48,6 +48,8 @@ spec:
           ports:
             - containerPort: 5678
           env:
+            - name: N8N_PORT
+              value: "5678"
             - name: N8N_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
