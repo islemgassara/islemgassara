@@ -22,6 +22,26 @@ spec:
       labels:
         app: n8n
     spec:
+      initContainers:
+        - name: import-workflow
+          image: {{ .Values.n8n.image }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              if n8n export:workflow --all --output=/tmp/check.json 2>/dev/null && grep -q '"name": "cfec"' /tmp/check.json 2>/dev/null; then
+                echo "Workflow cfec deja present, import ignore."
+              else
+                echo "Import du workflow cfec via CLI (pas d'API key necessaire)..."
+                n8n import:workflow --input=/workflow/workflow.json
+                echo "Import termine."
+              fi
+          volumeMounts:
+            - name: n8n-storage
+              mountPath: /home/node/.n8n
+            - name: workflow-file
+              mountPath: /workflow
       containers:
         - name: n8n
           image: {{ .Values.n8n.image }}
@@ -57,6 +77,9 @@ spec:
         - name: n8n-storage
           persistentVolumeClaim:
             claimName: n8n-pvc
+        - name: workflow-file
+          configMap:
+            name: n8n-workflow-cfn
 ---
 apiVersion: v1
 kind: Service
