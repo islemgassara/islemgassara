@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/mock-cfec-allow-n8n-only
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/mock-cfec-allow-n8n-only"},"name":"mock-cfec-allow-n8n-only","namespace":"integration-hub"},"spec":{"ingress":[{"from":[{"podSelector":{"matchLabels":{"app":"n8n"}}}],"ports":[{"port":4000,"protocol":"TCP"}]}],"podSelector":{"matchLabels":{"app":"mock-cfec"}},"policyTypes":["Ingress"]}}
+    meta.helm.sh/release-name: hub-release
+    meta.helm.sh/release-namespace: integration-hub
+  creationTimestamp: "2026-07-29T10:37:51Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: mock-cfec-allow-n8n-only
+  namespace: integration-hub
+  resourceVersion: "9220"
+  uid: 8f736d7b-ad89-4e35-a231-3732ad9ddeec
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: n8n
+    ports:
+    - port: 4000
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: mock-cfec
+  policyTypes:
+  - Ingress

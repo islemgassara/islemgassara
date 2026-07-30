@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/postgres-allow-hub-only
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/postgres-allow-hub-only"},"name":"postgres-allow-hub-only","namespace":"integration-hub"},"spec":{"ingress":[{"from":[{"podSelector":{"matchLabels":{"app":"integration-hub"}}}],"ports":[{"port":5432,"protocol":"TCP"}]}],"podSelector":{"matchLabels":{"app":"postgres"}},"policyTypes":["Ingress"]}}
+    meta.helm.sh/release-name: hub-release
+    meta.helm.sh/release-namespace: integration-hub
+  creationTimestamp: "2026-07-29T10:37:51Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: postgres-allow-hub-only
+  namespace: integration-hub
+  resourceVersion: "9219"
+  uid: e69a802c-d3c7-4dee-ac4b-1d9f1dccdac4
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: integration-hub
+    ports:
+    - port: 5432
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress

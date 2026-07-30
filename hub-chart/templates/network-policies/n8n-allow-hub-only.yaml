@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/n8n-allow-hub-only
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"integration-hub:networking.k8s.io/NetworkPolicy:integration-hub/n8n-allow-hub-only"},"name":"n8n-allow-hub-only","namespace":"integration-hub"},"spec":{"ingress":[{"from":[{"podSelector":{"matchLabels":{"app":"integration-hub"}}}],"ports":[{"port":5678,"protocol":"TCP"}]}],"podSelector":{"matchLabels":{"app":"n8n"}},"policyTypes":["Ingress"]}}
+    meta.helm.sh/release-name: hub-release
+    meta.helm.sh/release-namespace: integration-hub
+  creationTimestamp: "2026-07-29T10:37:51Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: n8n-allow-hub-only
+  namespace: integration-hub
+  resourceVersion: "9218"
+  uid: 1bff710c-9ddc-43ed-a581-ecbd40f3b2c3
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: integration-hub
+    ports:
+    - port: 5678
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: n8n
+  policyTypes:
+  - Ingress
