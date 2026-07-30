@@ -6,4 +6,12 @@ metadata:
 spec:
   applicationRefs:
     - namePattern: "integration-hub"
-      useAnnotations: true
+      images:
+        - alias: hub
+          imageName: islem12/integration-hub
+          commonUpdateSettings:
+            updateStrategy: latest
+          manifestTargets:
+            helm:
+              name: hub.repository
+              tag: hub.tag

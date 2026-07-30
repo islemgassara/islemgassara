@@ -1,41 +1,20 @@
-
 apiVersion: argoproj.io/v1alpha1
-
 kind: Application
-
 metadata:
-
   name: integration-hub
-
   namespace: argocd
-
 spec:
-
   project: default
-
   source:
-
     repoURL: https://github.com/islemgassara/islemgassara.git
-
     targetRevision: main
-
     path: hub-chart
-
   destination:
-
     server: https://kubernetes.default.svc
-
     namespace: integration-hub
-
   syncPolicy:
-
     automated:
-
       prune: true
-
       selfHeal: true
-
     syncOptions:
-
       - CreateNamespace=true
-
