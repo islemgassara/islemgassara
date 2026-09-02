@@ -37,6 +37,10 @@ spec:
               echo "Import du workflow cfec via CLI (idempotent, pas d'API key)..."
               sed -e "1i [" -e "\$a ]" /workflow/workflow.json > /tmp/workflow-array.json
               n8n import:workflow --input=/tmp/workflow-array.json
+              WORKFLOW_ID=$(n8n export:workflow --all --output=/tmp/check.json > /dev/null 2>&1; node -e "console.log(require('/tmp/check.json')[0].id)" 2>/dev/null)
+              if [ -n "$WORKFLOW_ID" ]; then
+                n8n update:workflow --id="$WORKFLOW_ID" --active=true || true
+              fi
               echo "Import termine."
           volumeMounts:
             - name: n8n-storage
