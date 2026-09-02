@@ -57,8 +57,11 @@ for img in "${IMAGES[@]}"; do
   docker pull "$img" --quiet || echo "    (echec du pull, on continue - l'image sera retentee par Kubernetes)"
 done
 
-echo "Import des images dans le cluster..."
-k3d image import "${IMAGES[@]}" -c "$CLUSTER_NAME" || echo "  (import partiel, sans impact si les images sont deja presentes)"
+echo "Import des images dans le cluster (une par une, evite un bug connu de k3d sur les imports groupes)..."
+for img in "${IMAGES[@]}"; do
+  echo "  import: $img"
+  k3d image import "$img" -c "$CLUSTER_NAME" || echo "    (echec, sans impact si l'image est deja presente sur le cluster)"
+done
 
 # ---------------------------------------------------------------------------
 log "4/8 - Installation de Vault (mode developpement)"
@@ -119,7 +122,19 @@ echo "OK - Vault configure et peuple automatiquement"
 log "7/8 - Deploiement de l'application"
 # ---------------------------------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE" --timeout 8m
+
+HELM_RETRIES=3
+for i in $(seq 1 $HELM_RETRIES); do
+  if helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE" --timeout 8m; then
+    break
+  elif [ "$i" -lt "$HELM_RETRIES" ]; then
+    echo "Tentative $i/$HELM_RETRIES echouee (conflit transitoire probable), nouvel essai dans 10s..."
+    sleep 10
+  else
+    echo "ERREUR : le deploiement a echoue apres $HELM_RETRIES tentatives."
+    exit 1
+  fi
+done
 
 echo "Attente de la stabilisation des pods (jusqu'a 3 minutes)..."
 kubectl wait --for=condition=Ready pods --all -n "$NAMESPACE" --timeout=180s 2>/dev/null || true
