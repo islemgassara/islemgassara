@@ -40,7 +40,8 @@ if ! kubectl get namespace vault &> /dev/null || ! kubectl get statefulset vault
     --set "server.dev.enabled=true" \
     --set "server.dev.devRootToken=root-token-demo"
 fi
-kubectl rollout status statefulset vault -n vault --timeout=120s
+until kubectl get pod -l app.kubernetes.io/name=vault -n vault 2>/dev/null | grep -q vault; do sleep 2; done
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=vault -n vault --timeout=120s
 
 log "4/7 - Installation d'External Secrets Operator"
 if ! kubectl get deployment external-secrets -n external-secrets &> /dev/null; then
@@ -78,7 +79,7 @@ echo "OK - Vault configure et peuple automatiquement"
 
 log "6/7 - Deploiement de l'application"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE"
+helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE" --timeout 5m
 
 echo "Attente de la stabilisation des pods (jusqu'a 3 minutes)..."
 kubectl wait --for=condition=Ready pods --all -n "$NAMESPACE" --timeout=180s 2>/dev/null || true
