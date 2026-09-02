@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# install.sh — Deploiement complet et automatique du projet Integration Hub.
+# Aucune commande manuelle Vault/kubectl/helm n'est requise en dehors de ce script.
+#
+# Usage : ./install.sh
+#
 set -e
 
 CLUSTER_NAME="integration-hub-cluster"
@@ -7,20 +13,24 @@ NAMESPACE="integration-hub"
 
 log() { echo -e "\n==> $1"; }
 
-log "1/7 - Verification des prerequis"
+# ---------------------------------------------------------------------------
+log "1/8 - Verification des prerequis"
+# ---------------------------------------------------------------------------
 for cmd in docker k3d kubectl helm; do
   if ! command -v "$cmd" &> /dev/null; then
-    echo "ERREUR : '$cmd' n'est pas installe."
+    echo "ERREUR : '$cmd' n'est pas installe. Voir le README pour les prerequis."
     exit 1
   fi
 done
 if ! docker ps &> /dev/null; then
-  echo "ERREUR : Docker n'est pas accessible."
+  echo "ERREUR : Docker n'est pas accessible. Demarrez Docker Desktop et reessayez."
   exit 1
 fi
 echo "OK - tous les prerequis sont presents"
 
-log "2/7 - Creation du cluster Kubernetes (k3d)"
+# ---------------------------------------------------------------------------
+log "2/8 - Creation du cluster Kubernetes (k3d)"
+# ---------------------------------------------------------------------------
 if k3d cluster list | grep -q "$CLUSTER_NAME"; then
   echo "Cluster '$CLUSTER_NAME' deja existant, reutilisation."
   k3d cluster start "$CLUSTER_NAME" || true
@@ -29,28 +39,56 @@ else
 fi
 kubectl cluster-info
 
-log "3/7 - Installation de Vault (mode developpement)"
+# ---------------------------------------------------------------------------
+log "3/8 - Pre-telechargement des images (evite les lenteurs reseau internes au cluster)"
+# ---------------------------------------------------------------------------
+IMAGES=(
+  "hashicorp/vault:2.0.4"
+  "ghcr.io/external-secrets/external-secrets:v2.10.0"
+  "postgres:16-alpine"
+  "quay.io/keycloak/keycloak:26.0"
+  "n8nio/n8n:1.60.1"
+  "islem12/integration-hub:latest"
+  "islem12/mock-cfec:latest"
+  "islem12/odm-authentication:latest"
+)
+for img in "${IMAGES[@]}"; do
+  echo "  - $img"
+  docker pull "$img" --quiet || echo "    (echec du pull, on continue - l'image sera retentee par Kubernetes)"
+done
+
+echo "Import des images dans le cluster..."
+k3d image import "${IMAGES[@]}" -c "$CLUSTER_NAME" || echo "  (import partiel, sans impact si les images sont deja presentes)"
+
+# ---------------------------------------------------------------------------
+log "4/8 - Installation de Vault (mode developpement)"
+# ---------------------------------------------------------------------------
 helm repo add hashicorp https://helm.releases.hashicorp.com --force-update
 helm repo add external-secrets https://charts.external-secrets.io --force-update
 helm repo update
 
-if ! kubectl get namespace vault &> /dev/null || ! kubectl get statefulset vault -n vault &> /dev/null; then
+if ! kubectl get statefulset vault -n vault &> /dev/null; then
   helm install vault hashicorp/vault \
     -n vault --create-namespace \
     --set "server.dev.enabled=true" \
     --set "server.dev.devRootToken=root-token-demo"
 fi
+echo "Attente du pod Vault..."
 until kubectl get pod -l app.kubernetes.io/name=vault -n vault 2>/dev/null | grep -q vault; do sleep 2; done
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=vault -n vault --timeout=120s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=vault -n vault --timeout=180s
 
-log "4/7 - Installation d'External Secrets Operator"
+# ---------------------------------------------------------------------------
+log "5/8 - Installation d'External Secrets Operator"
+# ---------------------------------------------------------------------------
 if ! kubectl get deployment external-secrets -n external-secrets &> /dev/null; then
   helm install external-secrets external-secrets/external-secrets \
     -n external-secrets --create-namespace --set installCRDs=true
 fi
-kubectl rollout status deployment external-secrets -n external-secrets --timeout=120s
+kubectl rollout status deployment external-secrets -n external-secrets --timeout=180s
 
-log "5/7 - Configuration automatique de Vault (secrets + auth Kubernetes)"
+# ---------------------------------------------------------------------------
+log "6/8 - Configuration automatique de Vault (secrets + auth Kubernetes)"
+# ---------------------------------------------------------------------------
 kubectl exec -n vault vault-0 -- vault kv put secret/integration-hub \
   dbPassword="hub_password" \
   cryptoSecretKey="cxkoEGNRRaAAX5OnzEZs4bBdXl+9ex+YqiyaVcxN0DQ=" \
@@ -77,15 +115,19 @@ kubectl exec -n vault vault-0 -- vault write auth/kubernetes/role/integration-hu
 
 echo "OK - Vault configure et peuple automatiquement"
 
-log "6/7 - Deploiement de l'application"
+# ---------------------------------------------------------------------------
+log "7/8 - Deploiement de l'application"
+# ---------------------------------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE" --timeout 5m
+helm upgrade --install hub-release ./hub-chart -n "$NAMESPACE" --timeout 8m
 
 echo "Attente de la stabilisation des pods (jusqu'a 3 minutes)..."
 kubectl wait --for=condition=Ready pods --all -n "$NAMESPACE" --timeout=180s 2>/dev/null || true
 kubectl get pods -n "$NAMESPACE"
 
-log "7/7 - Verification de bout en bout"
+# ---------------------------------------------------------------------------
+log "8/8 - Verification de bout en bout"
+# ---------------------------------------------------------------------------
 kubectl port-forward -n "$NAMESPACE" svc/integration-hub 18086:8085 &> /dev/null &
 PF_PID=$!
 sleep 5
@@ -103,6 +145,13 @@ if echo "$RESULT" | grep -q '"status":"SUCCESS"'; then
   echo -e "\n=========================================="
   echo " INSTALLATION REUSSIE - projet fonctionnel"
   echo "=========================================="
+  echo ""
+  echo "Acces :"
+  echo "  Hub    : kubectl port-forward -n $NAMESPACE svc/integration-hub 18086:8085"
+  echo "  n8n    : kubectl port-forward -n $NAMESPACE svc/n8n 9091:5678"
+  echo "  Vault  : kubectl port-forward -n vault svc/vault 8200:8200 (token: root-token-demo)"
+  echo "  Ou via Ingress (apres ajout dans /etc/hosts) : http://hub.local:${INGRESS_PORT}"
 else
   echo -e "\nATTENTION : la verification finale n'a pas renvoye SUCCESS."
+  echo "Consultez 'kubectl get pods -n $NAMESPACE' et la section Depannage du RUNBOOK."
 fi
